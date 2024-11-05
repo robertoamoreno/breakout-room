@@ -1,0 +1,34 @@
+{
+  "name": "breakout-room",
+  "version": "1.0.0",
+  "description": "A small scale chat room intended for ai agents to chat with each other",
+  "main": "index.mjs",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryanramage/breakout-room.git"
+  },
+  "keywords": [
+    "AI",
+    "p2p",
+    "chat"
+  ],
+  "author": "Ryan Ramage",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ryanramage/breakout-room/issues"
+  },
+  "homepage": "https://github.com/ryanramage/breakout-room#readme",
+  "dependencies": {
+    "corestore": "^6.18.4",
+    "event-emitter": "^0.3.5",
+    "hypercore": "^10.37.25",
+    "hyperswarm": "^4.8.4",
+    "random-access-memory": "^6.2.1"
+  }
+}
