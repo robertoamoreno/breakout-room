@@ -3,8 +3,6 @@ import { EventEmitter } from 'events'
 import Corestore from 'corestore'
 import Hyperswarm from 'hyperswarm'
 import RAM from 'random-access-memory'
-import ProtomuxRPC from 'protomux-rpc'
-import b4a from 'b4a'
 import BlindPairing from 'blind-pairing'
 
 export class BreakoutRoom extends EventEmitter {
@@ -23,16 +21,15 @@ export class BreakoutRoom extends EventEmitter {
     this.swarm.on('connection', conn => this.corestore.replicate(conn))
 
     this.pairing = new BlindPairing(this.swarm)
-    const ourKey = this.mainCore.key
     if (this.invite) {
       const candidate = this.pairing.addCandidate({
         invite: this.invite,
         userData: this.mainCore.key,
-        onadd: (result) => this._onHostResponse(result)
+        onadd: (result) => this._onHostInvite(result)
       })
       await candidate.paring
     } else {
-      const { invite, publicKey, discoveryKey } = BlindPairing.createInvite(ourKey)
+      const { invite, publicKey, discoveryKey } = BlindPairing.createInvite(this.mainCore.key)
       const member = this.pairing.addMember({
         discoveryKey,
         onadd: (candidate) => this._onAddMember(publicKey, candidate)
@@ -43,10 +40,10 @@ export class BreakoutRoom extends EventEmitter {
   }
 
   message (data) {
-    this.mainCore.append({data})
+    this.mainCore.append({ data })
   }
 
-  async _onHostResponse (result) {
+  async _onHostInvite (result) {
     if (result.key) this._connectOtherCore(result.key)
   }
 
