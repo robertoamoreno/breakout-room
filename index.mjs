@@ -35,7 +35,7 @@ export class BreakoutRoom extends EventEmitter {
         onadd: (candidate) => this._onAddMember(publicKey, candidate)
       })
       await member.flushed()
-      console.log('invite your friend', z32.encode(invite))
+      return z32.encode(invite)
     }
   }
 
@@ -57,11 +57,8 @@ export class BreakoutRoom extends EventEmitter {
     const core = this.corestore.get(key)
     await core.ready()
     this.swarm.join(core.discoveryKey)
+    core.on('append', () => this.emit('message'))
     await core.update()
-    let position = core.length
-    for await (const block of core.createReadStream({ start: core.length, live: true })) {
-      console.log(`Block ${position++}: ${block}`)
-    }
   }
 
   async exit () {
