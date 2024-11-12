@@ -8,8 +8,8 @@ async function run () {
   if (hostInvite) console.log('Give out invite:', hostInvite)
 
   // send room messages from standard in
-  process.stdin.on('data', (data) => {
-    room.message(data.toString())
+  process.stdin.on('data', async (data) => {
+    await room.message(data.toString())
   })
 
   // on remote messages, get the full transcript
@@ -17,6 +17,8 @@ async function run () {
     console.log('remote message recieved')
     // get the full transcript
 
+    const transcript = room.getTranscript()
+    console.log('Transcript:', transcript)
   })
 
   const shutdown = () => {
