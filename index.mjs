@@ -1,65 +1,74 @@
+import z32 from 'z32'
 import { EventEmitter } from 'events'
 import Corestore from 'corestore'
 import Hyperswarm from 'hyperswarm'
 import RAM from 'random-access-memory'
 import ProtomuxRPC from 'protomux-rpc'
 import b4a from 'b4a'
-import { createInvite, getParts, verifyInviteBuffer, encodeInviteParts } from 'hyper-evite'
+import BlindPairing from 'blind-pairing'
 
 export class BreakoutRoom extends EventEmitter {
   constructor (opts = {}) {
     super()
-    if (opts.storageDir) {
-      this.corestore = new Corestore(opts.storageDir)
-    } else {
-      console.log('loading RAM')
-      this.corestore = new Corestore(RAM)
-    }
-    // we default to an in memory storage
-    if (opts.key) {
-      this.mainCore = this.corestore.get(opts.key)
-    } else {
-      console.log('creating mainCore')
-      this.mainCore = this.corestore.get({ name: 'manifest', valueEncoding: 'json' })
-    }
-    if (opts.invite) this.invite = opts.invite
-    else {
-      this.hostRoom = true
-      this.usedInvites = {}
-    }
+    if (opts.storageDir) this.corestore = new Corestore(opts.storageDir)
+    else this.corestore = new Corestore(RAM)
+    this.mainCore = this.corestore.get({ name: 'manifest', valueEncoding: 'json' })
     this.swarm = new Hyperswarm()
+    if (opts.invite) this.invite = z32.decode(opts.invite)
   }
 
   async ready () {
     await Promise.all([this.mainCore.ready()])
-    const hostRoom = !this.invite
-    const { parts, invite } = hostRoom ? createInvite(this.mainCore.keyPair.secretKey) : getParts(this.invite)
-    const swarmMode = { client: true, server: false }
-    if (hostRoom) {
-      console.log('invite your friends', invite)
-      swarmMode.server = true // do we need to do this?
+    this.swarm.join(this.mainCore.discoveryKey)
+    this.swarm.on('connection', conn => this.corestore.replicate(conn))
+
+    this.pairing = new BlindPairing(this.swarm)
+    const ourKey = this.mainCore.key
+    if (this.invite) {
+      const candidate = this.pairing.addCandidate({
+        invite: this.invite,
+        userData: this.mainCore.key,
+        onadd: (result) => this._onHostResponse(result)
+      })
+      await candidate.paring
+    } else {
+      const { invite, publicKey, discoveryKey } = BlindPairing.createInvite(ourKey)
+      const member = this.pairing.addMember({
+        discoveryKey,
+        onadd: (candidate) => this._onAddMember(publicKey, candidate)
+      })
+      await member.flushed()
+      console.log('invite your friend', z32.encode(invite))
     }
-    const discovery = this.swarm.join(parts.topic, swarmMode)
-    this.swarm.on('connection', async (conn, peerInfo) => {
-      const rpc = new ProtomuxRPC(conn)
-      if (hostRoom) {
-        rpc.respond('addMe', (req) => {
-          const { malformed, signFailed, expired } = verifyInviteBuffer(this.mainCore.keyPair.publicKey, req)
-          if (malformed || signFailed || expired) return console.log('bad invite')
-          const invite = encodeInviteParts(getParts(req))
-          if (this.usedInvites[invite]) return console.log('invite already used')
-          this.usedInvites[invite] = true
-          // let them in!
-        })
-      } else {
-        await rpc.request('addMe', Buffer.concat([parts.topic, parts.expirationBuffer, parts.signature]))
-      }
-      this.corestore.replicate(conn)
-    })
-    discovery.flushed().then(() => console.log('joined topic:', b4a.toString(parts.topic, 'hex')))
   }
 
-  exit () {
-    this.swarm.destroy()
+  message (data) {
+    this.mainCore.append({data})
+  }
+
+  async _onHostResponse (result) {
+    if (result.key) this._connectOtherCore(result.key)
+  }
+
+  async _onAddMember (publicKey, candidate) {
+    candidate.open(publicKey)
+    candidate.confirm({ key: this.mainCore.key })
+    this._connectOtherCore(candidate.userData)
+  }
+
+  async _connectOtherCore (key) {
+    const core = this.corestore.get(key)
+    await core.ready()
+    this.swarm.join(core.discoveryKey)
+    await core.update()
+    let position = core.length
+    for await (const block of core.createReadStream({ start: core.length, live: true })) {
+      console.log(`Block ${position++}: ${block}`)
+    }
+  }
+
+  async exit () {
+    await this.pairing.close()
+    await this.swarm.destroy()
   }
 }
