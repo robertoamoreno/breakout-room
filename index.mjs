@@ -9,10 +9,20 @@ import Autobase from 'autobase'
 export class BreakoutRoom extends EventEmitter {
   constructor (opts = {}) {
     super()
-    if (opts.storageDir) this.corestore = new Corestore(opts.storageDir)
-    else this.corestore = new Corestore(RAM.reusable())
+    const internalManaged = {
+      corestore: false,
+      swarm: false,
+      pairing: false
+    }
+    if (opts.corestore) this.corestore = opts.corestore
+    else {
+      internalManaged.corestore = true
+      if (opts.storageDir) this.corestore = new Corestore(opts.storageDir)
+      else this.corestore = new Corestore(RAM.reusable())
+    }
+    this.swarm = opts.swarm || new Hyperswarm()
+    this.pairing = opts.pairing || new BlindPairing(this.swarm)
     this.autobase = new Autobase(this.corestore, null, { apply, open, valueEncoding: 'json' })
-    this.swarm = new Hyperswarm()
     if (opts.invite) this.invite = z32.decode(opts.invite)
   }
 
@@ -27,7 +37,6 @@ export class BreakoutRoom extends EventEmitter {
     this.swarm.join(this.autobase.local.discoveryKey)
     this.swarm.on('connection', conn => this.corestore.replicate(conn))
 
-    this.pairing = new BlindPairing(this.swarm)
     if (this.invite) {
       const candidate = this.pairing.addCandidate({
         invite: this.invite,
