@@ -24,11 +24,15 @@ export class BreakoutRoom extends EventEmitter {
 
   async ready () {
     await this.autobase.ready()
+    // some hacky stuff to only emit remote messages, and only emit once
+    this.lastEmitMessageLength = 0
     this.autobase.view.on('append', async () => {
       const entry = await this.autobase.view.get(this.autobase.view.length - 1)
       if (entry.who === z32.encode(this.autobase.local.key)) return
       if (entry.event === 'leftChat') return this.emit('peerLeft', entry.who)
-      this.emit('message', entry)
+      if (this.lastEmitMessageLength === this.autobase.view.length) return
+      this.lastEmitMessageLength = this.autobase.view.length
+      process.nextTick(() => this.emit('message', entry))
     })
     this.swarm.join(this.autobase.local.discoveryKey)
     this.swarm.on('connection', conn => this.corestore.replicate(conn))
