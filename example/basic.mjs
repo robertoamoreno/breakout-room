@@ -13,11 +13,11 @@ async function run () {
   })
 
   // on remote messages, get the full transcript
-  room.on('message', () => {
-    console.log('remote message recieved')
+  room.on('message', async (m) => {
+    console.log('remote message recieved', m)
     // get the full transcript
 
-    const transcript = room.getTranscript()
+    const transcript = await room.getTranscript()
     console.log('Transcript:', transcript)
   })
 

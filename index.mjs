@@ -18,6 +18,11 @@ export class BreakoutRoom extends EventEmitter {
 
   async ready () {
     await this.autobase.ready()
+    this.autobase.view.on('append', async () => {
+      const entry = await this.autobase.view.get(this.autobase.view.length - 1)
+      if (entry.who === z32.encode(this.autobase.local.key)) return
+      this.emit('message', entry.data)
+    })
     console.log('our key', z32.encode(this.autobase.local.key))
     this.swarm.join(this.autobase.local.discoveryKey)
     this.swarm.on('connection', conn => this.corestore.replicate(conn))
@@ -42,7 +47,11 @@ export class BreakoutRoom extends EventEmitter {
   }
 
   async message (data) {
-    await this.autobase.append({ data })
+    await this.autobase.append({ 
+      when: Date.now(), 
+      who: z32.encode(this.autobase.local.key), 
+      data 
+    })
   }
 
   async _onHostInvite (result) {
@@ -66,7 +75,8 @@ export class BreakoutRoom extends EventEmitter {
     await this.autobase.update()
     for (let i = 0; i < this.autobase.view.length; i++) {
       transcript.push(await this.autobase.view.get(i))
-    }    
+    }
+    return transcript
   }
 
   async exit () {
@@ -76,25 +86,18 @@ export class BreakoutRoom extends EventEmitter {
 }
 
 // create the view
-async function open (store) {
+function open (store) {
   return store.get({name: 'view', valueEncoding: 'json'})
 }
 
 // use apply to handle to updates
 async function apply (nodes, view, base) {
-  console.log('doing', view)
   for (const { value } of nodes) {
-    console.log('the value', value)
     if (value.addWriter) {
       if (value.addWriter.type) continue // weird cycle have to figure out
-      console.log('adding writer', z32.encode(value.addWriter))
       await base.addWriter(value.addWriter, { isIndexer: true })
-      console.log('writer added')
       continue
     }
-    if (view && view.append) {
-      console.log('doing append')
-      await view.append(value)
-    } else console.log('skipping')
+    await view.append(value)
   }
 }
