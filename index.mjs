@@ -20,8 +20,18 @@ export class BreakoutRoom extends EventEmitter {
       if (opts.storageDir) this.corestore = new Corestore(opts.storageDir)
       else this.corestore = new Corestore(RAM.reusable())
     }
-    this.swarm = opts.swarm || new Hyperswarm()
-    this.pairing = opts.pairing || new BlindPairing(this.swarm)
+    if (opts.swarm) {
+      this.swarm = opts.swarm
+    } else {
+      internalManaged.swarm = true
+      this.swarm = new Hyperswarm()
+    }
+    if (opts.pairing) {
+      this.pairing = opts.pairing
+    } else {
+      internalManaged.pairing = true
+      this.pairing = new BlindPairing(this.swarm)
+    }
     this.autobase = new Autobase(this.corestore, null, { apply, open, valueEncoding: 'json' })
     if (opts.invite) this.invite = z32.decode(opts.invite)
   }
@@ -95,8 +105,8 @@ export class BreakoutRoom extends EventEmitter {
       event: 'leftChat' 
     })
     await this.autobase.update()
-    await this.pairing.close()
-    await this.swarm.destroy()
+    if (internalManaged.pairing) await this.pairing.close()
+    if (internalManaged.swarm) await this.swarm.destroy()
   }
 }
 
