@@ -6,6 +6,53 @@ import RAM from 'random-access-memory'
 import BlindPairing from 'blind-pairing'
 import Autobase from 'autobase'
 
+export class RoomManager {
+  constructor (opts) {
+    this.internalManaged = { corestore: false, swarm: false, pairing: false }
+    if (opts.corestore) this.corestore = opts.corestore
+    else {
+      this.internalManaged.corestore = true
+      if (opts.storageDir) this.corestore = new Corestore(opts.storageDir)
+      else this.corestore = new Corestore(RAM.reusable())
+    }
+    this.swarm = opts.swarm ? opts.swarm : (this.internalManaged.swarm = true, new Hyperswarm())
+    this.pairing = opts.pairing ? opts.pairing : (this.internalManaged.pairing = true, new BlindPairing(this.swarm))
+    this.roomCreated = 0
+    this.activeRooms = 0
+    this.rooms = {}
+  }
+
+  getRoomOptions () {
+    return { corestore: this.corestore, swarm: this.swarm, pairing: this.pairing }
+  }
+
+  createRoom (opts = {}) {
+    const baseOpts = this.getRoomOptions()
+    if (opts.invite) baseOpts.invite = opts.invite
+    if (opts.metadata) baseOpts.metadata = opts
+    opts.roomCount = this.roomCreated++
+    this.activeRooms++
+    const room = new BreakoutRoom(baseOpts)
+    this.rooms[opts.roomCount] = room
+    room.on('roomClosed', () => {
+      this.activeRooms--
+      delete this.rooms[opts.roomCount]
+    })
+    return room
+  }
+
+  async cleanup () {
+    // exit all active rooms
+    if (this.internalManaged.pairing) await this.pairing.close()
+    if (this.internalManaged.swarm) await this.swarm.destroy()
+    if (this.internalManaged.corestore) await this.corestore.close()
+    for (const key in this.rooms) {
+      await this.rooms[key].exit()
+      delete this.rooms[key]
+    }
+  }
+}
+
 export class BreakoutRoom extends EventEmitter {
   constructor (opts = {}) {
     super()
@@ -16,10 +63,12 @@ export class BreakoutRoom extends EventEmitter {
       if (opts.storageDir) this.corestore = new Corestore(opts.storageDir)
       else this.corestore = new Corestore(RAM.reusable())
     }
-    this.swarm = opts.swarm ? opts.swarm : (this.internalManaged.swarm = true, new Hyperswarm());
+    this.swarm = opts.swarm ? opts.swarm : (this.internalManaged.swarm = true, new Hyperswarm())
     this.pairing = opts.pairing ? opts.pairing : (this.internalManaged.pairing = true, new BlindPairing(this.swarm))
     this.autobase = new Autobase(this.corestore, null, { apply, open, valueEncoding: 'json' })
     if (opts.invite) this.invite = z32.decode(opts.invite)
+    if (opts.roomCount) this.roomCount = opts.roomCount
+    if (opts.metadata) this.metadata = opts.metadata
   }
 
   async ready () {
@@ -55,11 +104,18 @@ export class BreakoutRoom extends EventEmitter {
     }
   }
 
+  getRoomInfo () {
+    return {
+      roomCounter: this.roomCount,
+      metadata: this.metadata
+    }
+  }
+
   async message (data) {
-    await this.autobase.append({ 
-      when: Date.now(), 
-      who: z32.encode(this.autobase.local.key), 
-      data 
+    await this.autobase.append({
+      when: Date.now(),
+      who: z32.encode(this.autobase.local.key),
+      data
     })
   }
 
@@ -89,23 +145,25 @@ export class BreakoutRoom extends EventEmitter {
   }
 
   async exit () {
-    await this.autobase.append({ 
-      when: Date.now(), 
-      who: z32.encode(this.autobase.local.key), 
-      event: 'leftChat' 
+    await this.autobase.append({
+      when: Date.now(),
+      who: z32.encode(this.autobase.local.key),
+      event: 'leftChat'
     })
     await this.autobase.update()
     this.swarm.leave(this.autobase.local.discoveryKey)
     await this.autobase.close()
-    this.removeAllListeners() // clean up listeners
     if (this.internalManaged.pairing) await this.pairing.close()
     if (this.internalManaged.swarm) await this.swarm.destroy()
+    if (this.internalManaged.corestore) await this.corestore.close()
+    this.emit('roomClosed')
+    this.removeAllListeners() // clean up listeners
   }
 }
 
 // create the view
 function open (store) {
-  return store.get({name: 'view', valueEncoding: 'json'})
+  return store.get({ name: 'view', valueEncoding: 'json' })
 }
 
 // use apply to handle to updates
