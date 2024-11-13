@@ -8,25 +8,26 @@ async function run () {
   if (hostInvite) console.log('Give out invite:', hostInvite)
 
   // send room messages from standard in
-  process.stdin.on('data', async (data) => {
-    await room.message(data.toString())
+  process.stdin.on('data', async (data) => await room.message(data.toString()))
+
+  room.on('peerEntered', (peerKey) => console.log('peer entered the room', peerKey))
+  room.on('peerLeft', (peerKey) => {
+    console.log('peer left the room', peerKey)
+    room.exit()
+    process.exit(0)
   })
 
-  // on remote messages, get the full transcript
   room.on('message', async (m) => {
     console.log('remote message recieved', m)
-    // get the full transcript
-
     const transcript = await room.getTranscript()
     console.log('Transcript:', transcript)
   })
 
-  const shutdown = () => {
-    room.exit()
+  const shutdown = async () => {
+    await room.exit()
     process.exit(0)
   }
   process.on('SIGINT', shutdown)
   process.on('SIGTERM', shutdown)
 }
-
 run()

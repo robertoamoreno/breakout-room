@@ -19,4 +19,7 @@ then in another terminal
 
 ```
 
+Then you can type messages in each terminal to have it go into the chat log.
+
+see [basic example](example/basic.mjs) for using the breakout-room
 

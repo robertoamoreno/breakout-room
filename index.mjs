@@ -21,9 +21,9 @@ export class BreakoutRoom extends EventEmitter {
     this.autobase.view.on('append', async () => {
       const entry = await this.autobase.view.get(this.autobase.view.length - 1)
       if (entry.who === z32.encode(this.autobase.local.key)) return
-      this.emit('message', entry.data)
+      if (entry.event === 'leftChat') return this.emit('peerLeft', entry.who)
+      this.emit('message', entry)
     })
-    console.log('our key', z32.encode(this.autobase.local.key))
     this.swarm.join(this.autobase.local.discoveryKey)
     this.swarm.on('connection', conn => this.corestore.replicate(conn))
 
@@ -67,7 +67,7 @@ export class BreakoutRoom extends EventEmitter {
   async _connectOtherCore (key) {
     console.log('connecting to other', z32.encode(key))
     await this.autobase.append({ addWriter: key })
-    console.log('connection complete')
+    this.emit('peerEntered', z32.encode(key))
   }
 
   async getTranscript () {
@@ -80,6 +80,12 @@ export class BreakoutRoom extends EventEmitter {
   }
 
   async exit () {
+    await this.autobase.append({ 
+      when: Date.now(), 
+      who: z32.encode(this.autobase.local.key), 
+      event: 'leftChat' 
+    })
+    await this.autobase.update()
     await this.pairing.close()
     await this.swarm.destroy()
   }
