@@ -16,18 +16,8 @@ export class BreakoutRoom extends EventEmitter {
       if (opts.storageDir) this.corestore = new Corestore(opts.storageDir)
       else this.corestore = new Corestore(RAM.reusable())
     }
-    if (opts.swarm) {
-      this.swarm = opts.swarm
-    } else {
-      this.internalManaged.swarm = true
-      this.swarm = new Hyperswarm()
-    }
-    if (opts.pairing) {
-      this.pairing = opts.pairing
-    } else {
-      this.internalManaged.pairing = true
-      this.pairing = new BlindPairing(this.swarm)
-    }
+    this.swarm = opts.swarm ? opts.swarm : (this.internalManaged.swarm = true, new Hyperswarm());
+    this.pairing = opts.pairing ? opts.pairing : (this.internalManaged.pairing = true, new BlindPairing(this.swarm))
     this.autobase = new Autobase(this.corestore, null, { apply, open, valueEncoding: 'json' })
     if (opts.invite) this.invite = z32.decode(opts.invite)
   }
