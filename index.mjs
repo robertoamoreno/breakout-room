@@ -97,6 +97,7 @@ export class BreakoutRoom extends EventEmitter {
     await this.autobase.update()
     this.swarm.leave(this.autobase.local.discoveryKey)
     await this.autobase.close()
+    this.removeAllListeners() // clean up listeners
     if (this.internalManaged.pairing) await this.pairing.close()
     if (this.internalManaged.swarm) await this.swarm.destroy()
   }
