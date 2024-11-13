@@ -42,13 +42,25 @@ export class RoomManager {
   }
 
   async cleanup () {
-    // exit all active rooms
-    if (this.internalManaged.pairing) await this.pairing.close()
-    if (this.internalManaged.swarm) await this.swarm.destroy()
-    if (this.internalManaged.corestore) await this.corestore.close()
-    for (const key in this.rooms) {
-      await this.rooms[key].exit()
-      delete this.rooms[key]
+    try {
+      // First collect all room exit promises
+      const exitPromises = Object.values(this.rooms).map(room => room.exit());
+      
+      // Wait for all rooms to exit
+      await Promise.all(exitPromises);
+      
+      // Clear rooms object after all exits complete
+      this.rooms = {};
+      this.activeRooms = 0;
+
+      // Clean up other resources
+      if (this.internalManaged.pairing) await this.pairing.close();
+      if (this.internalManaged.swarm) await this.swarm.destroy();
+      if (this.internalManaged.corestore) await this.corestore.close();
+    } catch (error) {
+      // Handle cleanup errors
+      console.error('Error during cleanup:', error);
+      throw error; // Re-throw to allow caller to handle
     }
   }
 }
