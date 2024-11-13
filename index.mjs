@@ -9,27 +9,23 @@ import Autobase from 'autobase'
 export class BreakoutRoom extends EventEmitter {
   constructor (opts = {}) {
     super()
-    const internalManaged = {
-      corestore: false,
-      swarm: false,
-      pairing: false
-    }
+    this.internalManaged = { corestore: false, swarm: false, pairing: false }
     if (opts.corestore) this.corestore = opts.corestore
     else {
-      internalManaged.corestore = true
+      this.internalManaged.corestore = true
       if (opts.storageDir) this.corestore = new Corestore(opts.storageDir)
       else this.corestore = new Corestore(RAM.reusable())
     }
     if (opts.swarm) {
       this.swarm = opts.swarm
     } else {
-      internalManaged.swarm = true
+      this.internalManaged.swarm = true
       this.swarm = new Hyperswarm()
     }
     if (opts.pairing) {
       this.pairing = opts.pairing
     } else {
-      internalManaged.pairing = true
+      this.internalManaged.pairing = true
       this.pairing = new BlindPairing(this.swarm)
     }
     this.autobase = new Autobase(this.corestore, null, { apply, open, valueEncoding: 'json' })
@@ -105,8 +101,10 @@ export class BreakoutRoom extends EventEmitter {
       event: 'leftChat' 
     })
     await this.autobase.update()
-    if (internalManaged.pairing) await this.pairing.close()
-    if (internalManaged.swarm) await this.swarm.destroy()
+    this.swarm.leave(this.autobase.local.discoveryKey)
+    await this.autobase.close()
+    if (this.internalManaged.pairing) await this.pairing.close()
+    if (this.internalManaged.swarm) await this.swarm.destroy()
   }
 }
 
