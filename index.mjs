@@ -38,26 +38,14 @@ export class RoomManager {
   }
 
   async cleanup () {
-    try {
-      console.log('Cleaning up BreakoutRoomManager')
-      // First collect all room exit promises
-      const exitPromises = Object.values(this.rooms).map(room => room.exit())
+    const exitPromises = Object.values(this.rooms).map(room => room.exit())
+    await Promise.all(exitPromises)
+    this.rooms = {}
 
-      // Wait for all rooms to exit
-      await Promise.all(exitPromises)
-
-      // Clear rooms object after all exits complete
-      this.rooms = {}
-
-      // Clean up other resources
-      if (this.internalManaged.pairing) await this.pairing.close()
-      if (this.internalManaged.swarm) await this.swarm.destroy()
-      if (this.internalManaged.corestere) await this.corestore.close()
-    } catch (error) {
-      // Handle cleanup errors
-      console.error('Error during cleanup:', error)
-      throw error // Re-throw to allow caller to handle
-    }
+    // Clean up other resources
+    if (this.internalManaged.pairing) await this.pairing.close()
+    if (this.internalManaged.swarm) await this.swarm.destroy()
+    if (this.internalManaged.corestere) await this.corestore.close()
   }
 }
 
@@ -149,7 +137,6 @@ export class BreakoutRoom extends EventEmitter {
   }
 
   async _connectOtherCore (key) {
-    console.log('connecting to other', z32.encode(key))
     await this.autobase.append({ addWriter: key })
     this.emit('peerEntered', z32.encode(key))
   }
@@ -172,7 +159,6 @@ export class BreakoutRoom extends EventEmitter {
     await this.autobase.update()
     this.swarm.leave(this.autobase.local.discoveryKey)
     await this.autobase.close()
-    console.log('closing down room', this.internalManaged)
     if (this.internalManaged.pairing) await this.pairing.close()
     if (this.internalManaged.swarm) await this.swarm.destroy()
     if (this.internalManaged.corestore) await this.corestore.close()
