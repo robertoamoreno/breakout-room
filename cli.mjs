@@ -12,9 +12,9 @@ async function run () {
   process.stdin.on('data', async (data) => await room.message(data.toString()))
 
   room.on('peerEntered', (peerKey) => console.log('peer entered the room', peerKey))
-  room.on('peerLeft', (peerKey) => {
+  room.on('peerLeft', async (peerKey) => {
     console.log('peer left the room', peerKey)
-    room.exit()
+    await room.exit()
     process.exit(0)
   })
 
@@ -24,7 +24,10 @@ async function run () {
     console.log('Transcript:', transcript)
   })
 
+  let inShutdown = false
   const shutdown = async () => {
+    if (inShutdown) return
+    inShutdown = true
     await room.exit()
     process.exit(0)
   }
