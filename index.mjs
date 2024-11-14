@@ -1,10 +1,10 @@
-import z32 from 'z32'
-import { EventEmitter } from 'events'
+import Autobase from 'autobase'
+import BlindPairing from 'blind-pairing'
 import Corestore from 'corestore'
 import Hyperswarm from 'hyperswarm'
 import RAM from 'random-access-memory'
-import BlindPairing from 'blind-pairing'
-import Autobase from 'autobase'
+import z32 from 'z32'
+import { EventEmitter } from 'events'
 
 export class RoomManager {
   constructor (opts = {}) {

@@ -6,8 +6,11 @@
   "directories": {
     "doc": "docs"
   },
+  "bin": {
+    "breakout-room": "example/basic.js"
+  },
   "scripts": {
-    "test": "standard && brittle test.js",
+    "test": "standard",
     "fix": "standard --fix"
   },
   "repository": {
@@ -29,16 +32,11 @@
     "autobase": "^6.5.9",
     "blind-pairing": "^2.3.1",
     "corestore": "^6.18.4",
-    "event-emitter": "^0.3.5",
-    "hypercore": "^10.37.25",
-    "hypercore-crypto": "^3.4.2",
     "hyperswarm": "^4.8.4",
-    "protomux-rpc": "^1.6.0",
     "random-access-memory": "^6.2.1",
     "z32": "^1.1.0"
   },
   "devDependencies": {
-    "brittle": "^3.7.0",
     "standard": "^17.1.2"
   }
 }

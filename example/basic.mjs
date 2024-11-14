@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { BreakoutRoom } from '../index.mjs'
 
 const invite = process.argv[2]
