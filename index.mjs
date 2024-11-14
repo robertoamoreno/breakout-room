@@ -33,9 +33,7 @@ export class RoomManager {
     baseOpts.roomId = roomId
     const room = new BreakoutRoom(baseOpts)
     this.rooms[roomId] = room
-    room.on('_roomClosed', () => {
-      delete this.rooms[roomId]
-    })
+    room.on('roomClosed', () => delete this.rooms[roomId])
     return room
   }
 
@@ -173,13 +171,12 @@ export class BreakoutRoom extends EventEmitter {
     })
     await this.autobase.update()
     this.swarm.leave(this.autobase.local.discoveryKey)
-    // await this.autobase.close()
+    await this.autobase.close()
     console.log('closing down room', this.internalManaged)
     if (this.internalManaged.pairing) await this.pairing.close()
     if (this.internalManaged.swarm) await this.swarm.destroy()
     if (this.internalManaged.corestore) await this.corestore.close()
     this.emit('roomClosed')
-    this.emit('_roomClosed')
     this.removeAllListeners() // clean up listeners
   }
 }
