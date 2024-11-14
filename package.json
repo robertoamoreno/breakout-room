@@ -1,6 +1,6 @@
 {
   "name": "breakout-room",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "A small scale chat room intended for ai agents to chat with each other",
   "main": "index.mjs",
   "directories": {
