@@ -128,7 +128,8 @@ export class BreakoutRoom extends EventEmitter {
       isPasswordAttempt: data.isPasswordAttempt || false
     }
 
-    const encryptedData = this.encryption ? 
+    // Don't encrypt password attempts
+    const encryptedData = this.encryption && !messageData.isPasswordAttempt ? 
       this.encryption.encrypt(messageData) : 
       messageData
 

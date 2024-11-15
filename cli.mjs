@@ -61,15 +61,8 @@ async function run () {
     if (!m.data) return
     
     let messageData = m.data
-    if (m.data.encrypted) {
-      if (!room.encryption) {
-        console.log('Encrypted message received but no password set')
-        return
-      }
-      messageData = room.encryption.decrypt(m.data)
-      if (!messageData) return
-    }
-
+    
+    // Password attempts are never encrypted
     if (messageData.type === 'password' && messageData.isPasswordAttempt) {
       if (room.verifyPassword(messageData.content)) {
         await room.message({
@@ -84,7 +77,16 @@ async function run () {
           hasAnsi: true
         })
       }
-    } else if (messageData.type === 'text') {
+    } else {
+      // For non-password messages, handle decryption
+      if (m.data.encrypted) {
+        if (!room.encryption) {
+          console.log('Encrypted message received but no password set')
+          return
+        }
+        messageData = room.encryption.decrypt(m.data)
+        if (!messageData) return
+      }
       const prefix = `${m.who}: `
       console.log(prefix + messageData.content)
     }
