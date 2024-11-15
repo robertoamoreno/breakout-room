@@ -4,8 +4,24 @@ import { createAnimation, getRandomConnectMessage } from './ansi-animation.mjs'
 
 const invite = process.argv[2]
 
+import readline from 'readline'
+import { MessageEncryption } from './encryption.mjs'
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+})
+
+const question = (query) => new Promise((resolve) => rl.question(query, resolve))
+
 async function run () {
-  const room = new BreakoutRoom({ invite })
+  let password
+  if (!invite) {
+    // Host sets password
+    password = await question('Set room password (or press enter for none): ')
+  }
+  
+  const room = new BreakoutRoom({ invite, password })
   const hostInvite = await room.ready()
   if (hostInvite) console.log('Give out invite:', hostInvite)
 
@@ -41,11 +57,45 @@ async function run () {
   })
 
   room.on('message', async (m) => {
-    if (m.data && m.data.type === 'text') {
+    if (!m.data) return
+    
+    let messageData = m.data
+    if (m.data.encrypted) {
+      if (!room.encryption) {
+        console.log('Encrypted message received but no password set')
+        return
+      }
+      messageData = room.encryption.decrypt(m.data)
+      if (!messageData) return
+    }
+
+    if (messageData.type === 'text') {
       const prefix = `${m.who}: `
-      console.log(prefix + m.data.content)
+      console.log(prefix + messageData.content)
     }
   })
+
+  // Handle password verification for joining peers
+  if (invite && room.password) {
+    const password = await question('Enter room password: ')
+    if (!room.verifyPassword(password)) {
+      console.error('Invalid password!')
+      process.exit(1)
+    }
+    console.log('Password accepted!')
+    
+    // Send a test encrypted message
+    const colors = ['\x1b[32m', '\x1b[33m', '\x1b[34m']
+    const testMsg = colors[Math.floor(Math.random() * colors.length)] +
+      'Encrypted message test - if you see this, encryption is working!' +
+      '\x1b[0m'
+    
+    await room.message({
+      type: 'text',
+      content: testMsg,
+      hasAnsi: true
+    })
+  }
 
   let inShutdown = false
   const shutdown = async () => {

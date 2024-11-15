@@ -53,6 +53,9 @@ export class BreakoutRoom extends EventEmitter {
   constructor (opts = {}) {
     super()
     this.roomId = opts.roomId || generateRoomId()
+    this.password = opts.password
+    this.encryption = null
+    this.authenticated = !opts.password // if no password, auto-authenticate
     this.internalManaged = { corestore: false, swarm: false, pairing: false }
     if (opts.corestore) this.corestore = opts.corestore
     else {
@@ -113,15 +116,47 @@ export class BreakoutRoom extends EventEmitter {
   }
 
   async message (data) {
+    if (!this.authenticated) {
+      throw new Error('Not authenticated')
+    }
+
+    const messageData = {
+      type: data.type || 'text',
+      content: data.content || data,
+      hasAnsi: data.hasAnsi || false
+    }
+
+    const encryptedData = this.encryption ? 
+      this.encryption.encrypt(messageData) : 
+      messageData
+
     await this.autobase.append({
       when: Date.now(),
       who: z32.encode(this.autobase.local.key),
-      data: {
-        type: data.type || 'text',
-        content: data.content || data,
-        hasAnsi: data.hasAnsi || false
-      }
+      data: encryptedData,
+      encrypted: !!this.encryption
     })
+  }
+
+  setPassword(password) {
+    if (this.encryption) return
+    this.password = password
+    this.encryption = new MessageEncryption(password)
+    this.authenticated = true
+  }
+
+  verifyPassword(password) {
+    if (!this.password) return true
+    const testEncryption = new MessageEncryption(password)
+    const challenge = MessageEncryption.generateChallenge()
+    const encrypted = testEncryption.encrypt({ test: challenge })
+    const decrypted = testEncryption.decrypt(encrypted)
+    if (decrypted && decrypted.test === challenge) {
+      this.encryption = testEncryption
+      this.authenticated = true
+      return true
+    }
+    return false
   }
 
   async _onHostInvite (result) {
