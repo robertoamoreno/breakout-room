@@ -65,6 +65,7 @@ async function run () {
     // Password attempts are never encrypted
     if (messageData.type === 'password' && messageData.isPasswordAttempt) {
       if (room.verifyPassword(messageData.content)) {
+        room.setPassword(messageData.content) // Set encryption for host when accepting password
         await room.message({
           type: 'auth-response',
           content: 'accepted',
@@ -77,7 +78,15 @@ async function run () {
           hasAnsi: true
         })
       }
-    } else {
+      return
+    } 
+    
+    if (messageData.type === 'auth-response') {
+      return // Handle auth responses separately via the promise in the join flow
+    }
+    
+    // Handle regular messages
+    {
       // For non-password messages, handle decryption
       if (m.data.encrypted) {
         if (!room.encryption) {

@@ -117,11 +117,6 @@ export class BreakoutRoom extends EventEmitter {
   }
 
   async message (data) {
-    // Allow password attempt messages even when not authenticated
-    if (!this.authenticated && (!data.isPasswordAttempt || data.type !== 'password')) {
-      throw new Error('Not authenticated')
-    }
-
     const messageData = {
       type: data.type || 'text',
       content: data.content || data,
@@ -129,8 +124,24 @@ export class BreakoutRoom extends EventEmitter {
       isPasswordAttempt: data.isPasswordAttempt || false
     }
 
-    // Don't encrypt password attempts
-    const encryptedData = this.encryption && !messageData.isPasswordAttempt ? 
+    // Always allow password-related messages
+    if (messageData.type === 'password' || messageData.type === 'auth-response') {
+      await this.autobase.append({
+        when: Date.now(),
+        who: z32.encode(this.autobase.local.key),
+        data: messageData,
+        encrypted: false
+      })
+      return
+    }
+
+    // Require authentication for other messages
+    if (!this.authenticated) {
+      throw new Error('Not authenticated')
+    }
+
+    // Encrypt regular messages if encryption is set up
+    const encryptedData = this.encryption ? 
       this.encryption.encrypt(messageData) : 
       messageData
 
