@@ -1,5 +1,6 @@
 import Autobase from 'autobase'
 import BlindPairing from 'blind-pairing'
+import { MessageEncryption } from './encryption.mjs'
 import Corestore from 'corestore'
 import Hyperswarm from 'hyperswarm'
 import RAM from 'random-access-memory'
