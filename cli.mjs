@@ -92,13 +92,24 @@ async function run () {
     }
   })
 
-  // Handle password verification for joining peers
-  if (invite && room.password) {
+  // For joining peers, monitor authentication status
+  if (invite) {
     const password = await question('Enter room password: ')
     await room.message({
       type: 'password',
       content: password,
       isPasswordAttempt: true
+    })
+    
+    // Wait for authentication
+    await new Promise(resolve => {
+      const checkAuth = setInterval(() => {
+        if (room.authenticated) {
+          clearInterval(checkAuth)
+          console.log('\x1b[32mAuthenticated successfully!\x1b[0m')
+          resolve()
+        }
+      }, 100)
     })
   }
 

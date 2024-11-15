@@ -117,7 +117,8 @@ export class BreakoutRoom extends EventEmitter {
   }
 
   async message (data) {
-    if (!this.authenticated) {
+    // Allow password attempt messages even when not authenticated
+    if (!this.authenticated && (!data.isPasswordAttempt || data.type !== 'password')) {
       throw new Error('Not authenticated')
     }
 
