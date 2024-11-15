@@ -24,12 +24,14 @@ async function run () {
   room.on('peerEntered', async (peerKey) => {
     console.log('peer entered the room', peerKey)
     const animation = createAnimation()
-    // Show animation for 3 seconds
+    const startTime = Date.now()
     for await (const frame of animation) {
       process.stdout.write(`\r${frame} New peer connected!`)
-      if (Date.now() - Date.now() > 3000) break
+      if (Date.now() - startTime > 3000) {
+        process.stdout.write('\n')
+        break
+      }
     }
-    process.stdout.write('\n')
   })
   room.on('peerLeft', async (peerKey) => {
     console.log('peer left the room', peerKey)
@@ -40,14 +42,8 @@ async function run () {
   room.on('message', async (m) => {
     if (m.data && m.data.type === 'text') {
       const prefix = `${m.who}: `
-      if (m.data.hasAnsi) {
-        console.log(prefix + m.data.content)
-      } else {
-        console.log(prefix + m.data.content)
-      }
+      console.log(prefix + m.data.content)
     }
-    const transcript = await room.getTranscript()
-    console.log('Transcript:', transcript)
   })
 
   let inShutdown = false

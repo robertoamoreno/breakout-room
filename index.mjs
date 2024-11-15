@@ -89,7 +89,7 @@ export class BreakoutRoom extends EventEmitter {
         userData: this.autobase.local.key,
         onadd: (result) => this._onHostInvite(result)
       })
-      await candidate.paring
+      await candidate.pairing
     } else {
       const { invite, publicKey, discoveryKey } = BlindPairing.createInvite(this.autobase.local.key)
       this.metadata.host = {
