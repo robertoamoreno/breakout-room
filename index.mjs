@@ -124,7 +124,8 @@ export class BreakoutRoom extends EventEmitter {
     const messageData = {
       type: data.type || 'text',
       content: data.content || data,
-      hasAnsi: data.hasAnsi || false
+      hasAnsi: data.hasAnsi || false,
+      isPasswordAttempt: data.isPasswordAttempt || false
     }
 
     const encryptedData = this.encryption ? 

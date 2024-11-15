@@ -69,7 +69,21 @@ async function run () {
       if (!messageData) return
     }
 
-    if (messageData.type === 'text') {
+    if (messageData.type === 'password' && messageData.isPasswordAttempt) {
+      if (this.verifyPassword(messageData.content)) {
+        await this.message({
+          type: 'text',
+          content: 'Password accepted!',
+          hasAnsi: true
+        })
+      } else {
+        await this.message({
+          type: 'text',
+          content: 'Invalid password!',
+          hasAnsi: true
+        })
+      }
+    } else if (messageData.type === 'text') {
       const prefix = `${m.who}: `
       console.log(prefix + messageData.content)
     }
@@ -78,22 +92,10 @@ async function run () {
   // Handle password verification for joining peers
   if (invite && room.password) {
     const password = await question('Enter room password: ')
-    if (!room.verifyPassword(password)) {
-      console.error('Invalid password!')
-      process.exit(1)
-    }
-    console.log('Password accepted!')
-    
-    // Send a test encrypted message
-    const colors = ['\x1b[32m', '\x1b[33m', '\x1b[34m']
-    const testMsg = colors[Math.floor(Math.random() * colors.length)] +
-      'Encrypted message test - if you see this, encryption is working!' +
-      '\x1b[0m'
-    
     await room.message({
-      type: 'text',
-      content: testMsg,
-      hasAnsi: true
+      type: 'password',
+      content: password,
+      isPasswordAttempt: true
     })
   }
 
