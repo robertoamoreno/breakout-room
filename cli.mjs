@@ -66,14 +66,14 @@ async function run () {
     if (messageData.type === 'password' && messageData.isPasswordAttempt) {
       if (room.verifyPassword(messageData.content)) {
         await room.message({
-          type: 'text',
-          content: 'Password accepted!',
+          type: 'auth-response',
+          content: 'accepted',
           hasAnsi: true
         })
       } else {
         await room.message({
-          type: 'text',
-          content: 'Invalid password!',
+          type: 'auth-response',
+          content: 'rejected',
           hasAnsi: true
         })
       }
@@ -101,15 +101,25 @@ async function run () {
       isPasswordAttempt: true
     })
     
-    // Wait for authentication
-    await new Promise(resolve => {
-      const checkAuth = setInterval(() => {
-        if (room.authenticated) {
-          clearInterval(checkAuth)
-          console.log('\x1b[32mAuthenticated successfully!\x1b[0m')
-          resolve()
+    // Wait for authentication response
+    await new Promise((resolve, reject) => {
+      const authTimeout = setTimeout(() => {
+        reject(new Error('Authentication timeout'))
+      }, 5000)
+
+      room.once('message', async (m) => {
+        if (m.data && m.data.type === 'auth-response') {
+          clearTimeout(authTimeout)
+          if (m.data.content === 'accepted') {
+            room.setPassword(password) // Set up encryption after acceptance
+            console.log('\x1b[32mAuthenticated successfully!\x1b[0m')
+            resolve()
+          } else {
+            console.log('\x1b[31mAuthentication failed!\x1b[0m')
+            process.exit(1)
+          }
         }
-      }, 100)
+      })
     })
   }
 

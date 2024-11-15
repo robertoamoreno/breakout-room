@@ -154,15 +154,13 @@ export class BreakoutRoom extends EventEmitter {
       this.authenticated = true
       return true
     }
-    const testEncryption = new MessageEncryption(password)
-    const challenge = MessageEncryption.generateChallenge()
-    const encrypted = testEncryption.encrypt({ test: challenge })
-    const decrypted = testEncryption.decrypt(encrypted)
-    if (decrypted && decrypted.test === challenge) {
-      this.encryption = testEncryption
+    
+    // Test if the provided password matches
+    if (password === this.password) {
       this.authenticated = true
       return true
     }
+    
     this.authenticated = false
     return false
   }
