@@ -147,7 +147,10 @@ export class BreakoutRoom extends EventEmitter {
   }
 
   verifyPassword(password) {
-    if (!this.password) return true
+    if (!this.password) {
+      this.authenticated = true
+      return true
+    }
     const testEncryption = new MessageEncryption(password)
     const challenge = MessageEncryption.generateChallenge()
     const encrypted = testEncryption.encrypt({ test: challenge })
@@ -157,6 +160,7 @@ export class BreakoutRoom extends EventEmitter {
       this.authenticated = true
       return true
     }
+    this.authenticated = false
     return false
   }
 
