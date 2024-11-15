@@ -70,14 +70,14 @@ async function run () {
     }
 
     if (messageData.type === 'password' && messageData.isPasswordAttempt) {
-      if (this.verifyPassword(messageData.content)) {
-        await this.message({
+      if (room.verifyPassword(messageData.content)) {
+        await room.message({
           type: 'text',
           content: 'Password accepted!',
           hasAnsi: true
         })
       } else {
-        await this.message({
+        await room.message({
           type: 'text',
           content: 'Invalid password!',
           hasAnsi: true
