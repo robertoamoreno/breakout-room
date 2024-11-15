@@ -116,7 +116,11 @@ export class BreakoutRoom extends EventEmitter {
     await this.autobase.append({
       when: Date.now(),
       who: z32.encode(this.autobase.local.key),
-      data
+      data: {
+        type: data.type || 'text',
+        content: data.content || data,
+        hasAnsi: data.hasAnsi || false
+      }
     })
   }
 

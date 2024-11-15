@@ -10,7 +10,16 @@ async function run () {
   if (hostInvite) console.log('Give out invite:', hostInvite)
 
   // send room messages from standard in
-  process.stdin.on('data', async (data) => await room.message(data.toString()))
+  process.stdin.on('data', async (data) => {
+    const message = data.toString().trim()
+    if (message) {
+      await room.message({
+        type: 'text',
+        content: message,
+        hasAnsi: message.includes('\x1b[')
+      })
+    }
+  })
 
   room.on('peerEntered', async (peerKey) => {
     console.log('peer entered the room', peerKey)
@@ -29,7 +38,14 @@ async function run () {
   })
 
   room.on('message', async (m) => {
-    console.log('remote message recieved', m)
+    if (m.data && m.data.type === 'text') {
+      const prefix = `${m.who}: `
+      if (m.data.hasAnsi) {
+        console.log(prefix + m.data.content)
+      } else {
+        console.log(prefix + m.data.content)
+      }
+    }
     const transcript = await room.getTranscript()
     console.log('Transcript:', transcript)
   })
