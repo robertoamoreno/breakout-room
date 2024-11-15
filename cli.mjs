@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { BreakoutRoom } from './index.mjs'
-import { createAnimation } from './ansi-animation.mjs'
+import { createAnimation, getRandomConnectMessage } from './ansi-animation.mjs'
 
 const invite = process.argv[2]
 
@@ -24,9 +24,10 @@ async function run () {
   room.on('peerEntered', async (peerKey) => {
     console.log('peer entered the room', peerKey)
     const animation = createAnimation()
+    const connectMsg = getRandomConnectMessage()
     const startTime = Date.now()
     for await (const frame of animation) {
-      process.stdout.write(`\r${frame} New peer connected!`)
+      process.stdout.write(`\r${frame} ${connectMsg}`)
       if (Date.now() - startTime > 3000) {
         process.stdout.write('\n')
         break
