@@ -56,7 +56,7 @@ export class BreakoutRoom extends EventEmitter {
     this.roomId = opts.roomId || generateRoomId()
     this.password = opts.password
     this.encryption = opts.password ? new MessageEncryption(opts.password) : null
-    this.authenticated = !opts.password // if no password, auto-authenticate
+    this.authenticated = true // Always authenticate the host
     this.internalManaged = { corestore: false, swarm: false, pairing: false }
     if (opts.corestore) this.corestore = opts.corestore
     else {
