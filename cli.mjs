@@ -25,6 +25,7 @@ async function run () {
   const hostInvite = await room.ready()
   if (hostInvite) console.log('Give out invite:', hostInvite)
 
+
   // send room messages from standard in
   process.stdin.on('data', async (data) => {
     const message = data.toString().trim()
